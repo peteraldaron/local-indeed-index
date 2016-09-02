@@ -13,6 +13,19 @@ class Client:
         self.db = db.DataBase();
         self.clientKey = clientKey
 
+    def _entry_fields_cleanup(result):
+        #remove useless fields:
+        del result['onmousedown']
+        del result['indeedApply']
+        del result['formattedRelativeTime']
+        del result['sponsored']
+        #replace _id
+        result['_id'] = result['jobkey']
+        del result['jobkey']
+        #convert date to actual mongo time:
+#TODO: we need node-like conversion
+        return result
+
     def queryAll(self, title="software", location="", country="fi"):
         params = {
                 'q' : title,
@@ -29,8 +42,16 @@ class Client:
             aggregated_results.extend(results['results']);
             params['start'] = results['end'];
             results = self.client.search(**params);
+        #postprocessing:
+        #remove expired entries:
+        aggregated_results = [x for x in aggregated_results if not x['expired']]
+        #cleanup entry fields:
+        aggregated_results = list(map(lambda x: Client._entry_fields_cleanup(x),
+                aggregated_results))
+
         #store results:
-        self.db.insertManyIntoCollection(aggregated_results, "indeed."+country);
+        if len(aggregated_results) > 0:
+            self.db.insertManyIntoCollection(aggregated_results, "indeed."+country);
 
 def getClient():
     if Client._singleton is None:
