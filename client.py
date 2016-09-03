@@ -36,22 +36,23 @@ class Client:
         }
         results = self.client.search(**params)
         #aggregate all results first:
-        aggregated_results = [];
+        #aggregated_results = [];
         while 'totalResults' in results\
                 and results['totalResults'] > results['end']:
-            aggregated_results.extend(results['results']);
+
+            aggregated_results = results['results'];
+            #postprocessing:
+            #remove expired entries:
+            aggregated_results = [x for x in aggregated_results if not x['expired']]
+            #cleanup entry fields:
+            aggregated_results = list(map(lambda x: Client._entry_fields_cleanup(x),
+                    aggregated_results))
+
+            #store results:
+            if len(aggregated_results) > 0:
+                self.db.insertManyIntoCollection(aggregated_results, "indeed."+country);
             params['start'] = results['end'];
             results = self.client.search(**params);
-        #postprocessing:
-        #remove expired entries:
-        aggregated_results = [x for x in aggregated_results if not x['expired']]
-        #cleanup entry fields:
-        aggregated_results = list(map(lambda x: Client._entry_fields_cleanup(x),
-                aggregated_results))
-
-        #store results:
-        if len(aggregated_results) > 0:
-            self.db.insertManyIntoCollection(aggregated_results, "indeed."+country);
 
 def getClient():
     if Client._singleton is None:
