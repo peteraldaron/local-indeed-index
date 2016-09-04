@@ -1,6 +1,6 @@
 import indeed, db
 from indeed import IndeedClient
-import os, sys
+import os, sys, datetime
 
 
 
@@ -12,6 +12,7 @@ class Client:
         self.client = IndeedClient(clientKey)
         self.db = db.DataBase();
         self.clientKey = clientKey
+        self.countries = set()
 
     def _entry_fields_cleanup(result):
         #remove useless fields:
@@ -22,24 +23,33 @@ class Client:
         #replace _id
         result['_id'] = result['jobkey']
         del result['jobkey']
+        #insert lastUpdated:
+        result['lastModified'] = datetime.datetime.utcnow()
         #convert date to actual mongo time:
 #TODO: we need node-like conversion
         return result
 
     def queryAll(self, title="software", location="", country="fi"):
+        self.countries.add(country)
         params = {
                 'q' : title,
                 'l' : location,
                 'co' : country,
+                'sort' : "date", #sort by date to get the latest ones
+                'limit': 25,
                 'userip' : '8.8.8.8',
                 'useragent' : Client._uastring
         }
         results = self.client.search(**params)
-        #aggregate all results first:
-        #aggregated_results = [];
-        while 'totalResults' in results\
-                and results['totalResults'] > results['end']:
 
+        #apparently indeed can only index less than 1000 pages per query
+        while 'totalResults' in results\
+                and results['totalResults'] > results['end']\
+                and results['end'] <= 1001:
+
+            print("processing results " + str(results['start'])+ " to " +
+                    str(results['end']) + " out of " +
+                    str(results['totalResults']))
             aggregated_results = results['results'];
             #postprocessing:
             #remove expired entries:
@@ -53,6 +63,10 @@ class Client:
                 self.db.insertManyIntoCollection(aggregated_results, "indeed."+country);
             params['start'] = results['end'];
             results = self.client.search(**params);
+
+def purgeAllExpiredEntriesInDB():
+    pass
+
 
 def getClient():
     if Client._singleton is None:

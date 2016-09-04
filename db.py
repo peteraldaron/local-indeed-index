@@ -29,15 +29,49 @@ class DataBase:
             collection = self.getCollection(collectionName);
         return collection.find_and_modify(query, update=document, upsert=True)
 
-    def insertManyIntoCollection(self, documents, collectionName, collection=None):
-        if collection == None:
-            collection = self.getCollection(collectionName);
-        return collection.insert_many(documents)
-'''
-    def getAllVisitedTitles(self, collectionName, collection=None):
-        if collection == None:
-            collection = self.getCollection(collectionName);
-        #TODO: consider using mongo's aggregation calls
-        return map(lambda x: x["title"], collection.find({}, {"title": 1, "_id": 0}))
-'''
+    def insertManyIntoCollection(self, documents, collectionName,
+            collection=None, insertNewOnly=True, insertionFilterParam="_id"):
 
+        if collection == None:
+            collection = self.getCollection(collectionName);
+
+        if insertNewOnly:
+            #filter out any preexisting entries:
+            existingDocs = self.findExistingEntriesInCollection(documents,
+                    insertionFilterParam, collectionName, collection)
+            if existingDocs.count() > 0:
+                #aggregate existing docs by search param:
+                existingDocs = set([x[insertionFilterParam] for x in
+                    existingDocs])
+                #filter:
+                documents = [x for x in documents if x[insertionFilterParam] not
+                        in existingDocs]
+
+        if len(documents) <= 0:
+            return
+
+        return collection.insert_many(documents)
+
+    def updateManyByParamInCollection(self, documents, param, collectioNname, collection=None):
+        if collection == None:
+            collection = self.getCollection(collectionName);
+
+        for doc in documents:
+            collection.find_one_and_update(
+                    {param : doc[param]},
+                    doc)
+    '''
+    returns list of entries with search param fields
+    '''
+    def findExistingEntriesInCollection(self, documents, searchParameter,
+            collectionName, collection=None):
+        if collection == None:
+            collection = self.getCollection(collectionName);
+
+        #aggregate documents of search param:
+        searchCriteria = [x[searchParameter] for x in documents]
+        return collection.find({
+            searchParameter: {
+                "$in" : searchCriteria
+            }
+        })
