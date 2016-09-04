@@ -35,17 +35,27 @@ class DataBase:
         if collection == None:
             collection = self.getCollection(collectionName);
 
-        if insertNewOnly:
-            #filter out any preexisting entries:
-            existingDocs = self.findExistingEntriesInCollection(documents,
-                    insertionFilterParam, collectionName, collection)
-            if existingDocs.count() > 0:
-                #aggregate existing docs by search param:
-                existingDocs = set([x[insertionFilterParam] for x in
-                    existingDocs])
-                #filter:
-                documents = [x for x in documents if x[insertionFilterParam] not
-                        in existingDocs]
+        #filter out any preexisting entries:
+        existingDocs = self.findExistingEntriesInCollection(documents,
+                insertionFilterParam, collectionName, collection)
+
+        if existingDocs.count() > 0:
+            #aggregate existing docs by search param:
+            existingDocs = set([x[insertionFilterParam] for x in
+                existingDocs])
+
+            if not insertNewOnly:
+                #also update existingDocs:
+                documentsToUpdate = [x for x in documents if
+                        x[insertionFilterParam] in existingDocs]
+
+                self.updateManyByParamInCollection(documentsToUpdate,
+                        insertionFilterParam, collectionName, collection)
+
+            #filter:
+            documents = [x for x in documents if x[insertionFilterParam] not
+                    in existingDocs]
+
 
         if len(documents) <= 0:
             return

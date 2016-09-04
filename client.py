@@ -60,13 +60,23 @@ class Client:
 
             #store results:
             if len(aggregated_results) > 0:
-                self.db.insertManyIntoCollection(aggregated_results, "indeed."+country);
+                self.db.insertManyIntoCollection(aggregated_results,
+                        "indeed."+country, insertNewOnly=False);
             params['start'] = results['end'];
             results = self.client.search(**params);
 
 def purgeAllExpiredEntriesInDB():
-    pass
-
+    client = getClient()
+    for country in client.countries:
+        collection = client.db.getCollection("indeed"+country)
+        cursor = collection.find({
+            "expired" : True
+        })
+        if cursor.count() > 0:
+            expiredIDs = [x["_id"] for x in cursor]
+            return collection.delete_many({
+                "_id": {"$in": expiredIDs}
+            })
 
 def getClient():
     if Client._singleton is None:
