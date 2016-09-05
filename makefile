@@ -1,4 +1,4 @@
 #for safeguards.
 
 all:
-	pip3 install indeed pymongo
+	pip3 install indeed pymongo dateparser

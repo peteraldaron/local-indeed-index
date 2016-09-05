@@ -1,6 +1,6 @@
 import indeed, db
 from indeed import IndeedClient
-import os, sys, datetime
+import os, sys, datetime, dateparser
 
 
 
@@ -26,7 +26,7 @@ class Client:
         #insert lastUpdated:
         result['lastModified'] = datetime.datetime.utcnow()
         #convert date to actual mongo time:
-#TODO: we need node-like conversion
+        result['date'] = dateparser.parse(result['date'])
         return result
 
     def queryAll(self, title="software", location="", country="fi"):
