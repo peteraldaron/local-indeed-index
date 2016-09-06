@@ -1,6 +1,7 @@
-import indeed, db
+import indeed, db, content
 from indeed import IndeedClient
 import os, sys, datetime, dateparser
+from concurrent.futures import ThreadPoolExecutor
 
 
 
@@ -13,6 +14,7 @@ class Client:
         self.db = db.DataBase();
         self.clientKey = clientKey
         self.countries = set()
+        self.threadPool = ThreadPoolExecutor(max_workers=25)
 
     def _entry_fields_cleanup(result):
         #remove useless fields:
@@ -27,6 +29,9 @@ class Client:
         result['lastModified'] = datetime.datetime.utcnow()
         #convert date to actual mongo time:
         result['date'] = dateparser.parse(result['date'])
+        #query for more detailed job summary:
+        result['detailedSummary'] = content.getJobSummary(result['url'])
+        result['summaryLang'] = content.languageDetect(result['detailedSummary'])
         return result
 
     def queryAll(self, title="software", location="", country="fi"):
@@ -55,13 +60,18 @@ class Client:
             #remove expired entries:
             aggregated_results = [x for x in aggregated_results if not x['expired']]
             #cleanup entry fields:
-            aggregated_results = list(map(lambda x: Client._entry_fields_cleanup(x),
+            aggregated_results = list(self.threadPool.map(lambda x: Client._entry_fields_cleanup(x),
                     aggregated_results))
 
             #store results:
             if len(aggregated_results) > 0:
-                self.db.insertManyIntoCollection(aggregated_results,
-                        "indeed."+country, insertNewOnly=False);
+                try:
+                    self.db.insertManyIntoCollection(aggregated_results,
+                            "indeed."+country, insertNewOnly=False);
+                except Exception as e:
+                    print("exception raised at db insertion")
+                    print(e)
+
             params['start'] = results['end'];
             results = self.client.search(**params);
 
