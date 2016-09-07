@@ -13,7 +13,6 @@ cl = client.getClient();
 
 
 #periodic job:
-'''
 with ThreadPoolExecutor(max_workers=len(target_countries)) as executor:
         futures = {executor.submit(cl.queryAll, keyword, "", country) for country
                 in target_countries}
@@ -26,3 +25,4 @@ with ThreadPoolExecutor(max_workers=len(target_countries)) as executor:
 '''
 import cProfile
 cProfile.run("cl.queryAll(keyword, \"\", \"fi\")")
+'''
