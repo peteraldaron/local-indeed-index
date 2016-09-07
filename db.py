@@ -69,7 +69,7 @@ class DataBase:
         for doc in documents:
             collection.find_one_and_update(
                     {param : doc[param]},
-                    doc)
+                    {"$set": doc})
     '''
     returns list of entries with search param fields
     '''
