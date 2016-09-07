@@ -2,7 +2,7 @@
 #using url given by a post page, visit url and try to extract anything useful
 #about the post
 
-import urllib
+import urllib, re
 from urllib import request
 from bs4 import BeautifulSoup as BS
 from nltk.corpus import stopwords
@@ -39,11 +39,9 @@ def languageDetect(string):
     return frequencies[0][0], frequencies
 
 def getJobSummary(url):
-    return parseHTTPUrl(url).find(id="job_summary").get_text()
-
+    rawtext = parseHTTPUrl(url).find(id="job_summary").get_text()
+    re.sub(r'[\r\t\n]', ' ', rawtext)
+    return rawtext
 
 def getLanguageOfJobSummary(url):
-    return languageDetect(
-            parseHTTPUrl(url)
-                .find(id="job_summary")
-                .get_text())
+    return languageDetect(getJobSummaryOfUrl(url))
