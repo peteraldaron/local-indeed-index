@@ -1,4 +1,4 @@
-import indeed, db, content
+import indeed, db, content, json
 from indeed import IndeedClient
 import os, sys, datetime, dateparser
 from concurrent.futures import ThreadPoolExecutor
@@ -31,10 +31,11 @@ class Client:
         result['date'] = dateparser.parse(result['date'])
         #query for more detailed job summary:
         result['detailedSummary'] = content.getJobSummary(result['url'])
-        result['summaryLang'] = content.languageDetect(result['detailedSummary'])
+        result['summaryLang'], _ = content.languageDetect(result['detailedSummary'])
         return result
 
     def queryAll(self, title="software", location="", country="fi"):
+        print(title + ", " + location + ", " + country)
         self.countries.add(country)
         params = {
                 'q' : title,
@@ -95,3 +96,9 @@ def getClient():
             key = key[0][:-1];
             Client._singleton = Client(key)
     return Client._singleton
+
+def readCitiesOfCountryFromJSON(country):
+    data = open("./cities.json").read()
+    parsed_json = json.loads(data)
+    return [city['name'] for city in [nation['cities'] for nation
+            in parsed_json if nation['country'] == country][0]]
