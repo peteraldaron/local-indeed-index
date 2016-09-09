@@ -9,11 +9,14 @@ target_countries = [
         "se"
 ]
 
-target_country_names = [
+target_country_names = {
+        "fi":
         "Finland",
+        "de":
         "Germany",
+        "se":
         "Sweden"
-]
+}
 
 cl = client.getClient();
 
@@ -21,8 +24,8 @@ cl = client.getClient();
 #periodic job:
 with ThreadPoolExecutor(max_workers=len(target_countries)) as executor:
         futures = {executor.submit(cl.queryAll, keyword, city, country) for country
-                in target_countries for country_name in target_country_names for city
-                in client.readCitiesOfCountryFromJSON(country_name)}
+                in target_countries for city in
+                client.readCitiesOfCountryFromJSON(target_country_names[country])}
 
         #wait for 2 hours:
         #time.sleep(60*60*2)
